@@ -86,4 +86,103 @@ public class LeadController : Controller
         ViewData["SearchTerm"] = searchTerm;
         return View(leads);
     }
+
+    [HttpGet]
+    public async Task<IActionResult> Details(int id)
+    {
+        var lead = await _context.Leads
+            .Include(item => item.AssignedUser)
+            .FirstOrDefaultAsync(item => item.LeadId == id);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        return View(lead);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Edit(int id)
+    {
+        var lead = await _context.Leads.FindAsync(id);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        return View(lead);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(
+        int id,
+        [Bind(
+            nameof(Lead.LeadName),
+            nameof(Lead.Email),
+            nameof(Lead.Phone),
+            nameof(Lead.CompanyName),
+            nameof(Lead.Source),
+            nameof(Lead.ExpectedValue),
+            nameof(Lead.Status))] Lead lead)
+    {
+        var existingLead = await _context.Leads.FindAsync(id);
+        if (existingLead is null)
+        {
+            return NotFound();
+        }
+
+        lead.LeadId = existingLead.LeadId;
+        lead.LeadCode = existingLead.LeadCode;
+        lead.CreatedDate = existingLead.CreatedDate;
+        lead.AssignedTo = existingLead.AssignedTo;
+
+        ModelState.Remove(nameof(Lead.LeadCode));
+        ModelState.Remove(nameof(Lead.CreatedDate));
+
+        if (!ModelState.IsValid)
+        {
+            return View(lead);
+        }
+
+        existingLead.LeadName = lead.LeadName;
+        existingLead.Email = lead.Email;
+        existingLead.Phone = lead.Phone;
+        existingLead.CompanyName = lead.CompanyName;
+        existingLead.Source = lead.Source;
+        existingLead.ExpectedValue = lead.ExpectedValue;
+        existingLead.Status = lead.Status;
+
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var lead = await _context.Leads
+            .Include(item => item.AssignedUser)
+            .FirstOrDefaultAsync(item => item.LeadId == id);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        return View(lead);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteConfirmed(int id)
+    {
+        var lead = await _context.Leads.FindAsync(id);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        _context.Leads.Remove(lead);
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
 }
