@@ -1,0 +1,24 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+
+# User-specific files
+*.user
+*.suo
+
+# Test results
+TestResults/
+*.trx
+
+# Local environment / secrets
+appsettings.Local.json
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
