@@ -1,5 +1,6 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
+using AcxiomCRM.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -13,13 +14,16 @@ public class OpportunityController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly AuditService _auditService;
 
     public OpportunityController(
         ApplicationDbContext context,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        AuditService auditService)
     {
         _context = context;
         _userManager = userManager;
+        _auditService = auditService;
     }
 
     [HttpGet]
@@ -90,6 +94,11 @@ public class OpportunityController : Controller
 
         _context.Opportunities.Add(opportunity);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Created",
+            "Opportunity",
+            opportunity.OpportunityId.ToString(),
+            newValue: $"Status={opportunity.Status};Stage={opportunity.Stage};Amount={opportunity.Amount}");
 
         return RedirectToAction(nameof(Index));
     }
@@ -163,6 +172,7 @@ public class OpportunityController : Controller
             return View(opportunity);
         }
 
+        var oldValue = $"Status={existingOpportunity.Status};Stage={existingOpportunity.Stage};Amount={existingOpportunity.Amount}";
         existingOpportunity.OpportunityName = opportunity.OpportunityName;
         existingOpportunity.CustomerId = opportunity.CustomerId;
         existingOpportunity.LeadId = opportunity.LeadId;
@@ -173,6 +183,12 @@ public class OpportunityController : Controller
         existingOpportunity.Status = opportunity.Status;
 
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Updated",
+            "Opportunity",
+            existingOpportunity.OpportunityId.ToString(),
+            oldValue,
+            $"Status={existingOpportunity.Status};Stage={existingOpportunity.Stage};Amount={existingOpportunity.Amount}");
         return RedirectToAction(nameof(Index));
     }
 
@@ -219,8 +235,10 @@ public class OpportunityController : Controller
             return NotFound();
         }
 
+        var opportunityId = opportunity.OpportunityId.ToString();
         _context.Opportunities.Remove(opportunity);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync("Deleted", "Opportunity", opportunityId);
         return RedirectToAction(nameof(Index));
     }
 

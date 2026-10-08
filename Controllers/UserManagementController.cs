@@ -1,5 +1,6 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
+using AcxiomCRM.Services;
 using AcxiomCRM.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -17,17 +18,20 @@ public class UserManagementController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly ILogger<UserManagementController> _logger;
+    private readonly AuditService _auditService;
 
     public UserManagementController(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
-        ILogger<UserManagementController> logger)
+        ILogger<UserManagementController> logger,
+        AuditService auditService)
     {
         _context = context;
         _userManager = userManager;
         _roleManager = roleManager;
         _logger = logger;
+        _auditService = auditService;
     }
 
     [HttpGet]
@@ -143,6 +147,8 @@ public class UserManagementController : Controller
             return View(model);
         }
 
+        await _auditService.TryLogAsync("UserCreated", "User", user.Id, newValue: $"Role={model.SelectedRole}");
+        await _auditService.TryLogAsync("RoleAssigned", "User", user.Id, newValue: $"Role={model.SelectedRole}");
         TempData["SuccessMessage"] = "User created successfully.";
         return RedirectToAction(nameof(Index));
     }
@@ -195,6 +201,8 @@ public class UserManagementController : Controller
         }
 
         var currentRoles = await _userManager.GetRolesAsync(user);
+        var oldCrmRole = currentRoles.FirstOrDefault(IsCrmRole);
+        var wasLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
         var isCurrentlyAdmin = currentRoles.Contains("Admin", StringComparer.Ordinal);
         var removesLastAdmin = isCurrentlyAdmin && model.SelectedRole != "Admin";
         var locksSelfAsLastAdmin = isCurrentlyAdmin &&
@@ -288,6 +296,27 @@ public class UserManagementController : Controller
             _logger.LogError(exception, "Failed to update user {UserId}.", user.Id);
             ModelState.AddModelError(string.Empty, "The user could not be updated. Please verify the details and try again.");
             return View(model);
+        }
+
+        await _auditService.TryLogAsync("UserUpdated", "User", user.Id);
+        if (!string.Equals(oldCrmRole, model.SelectedRole, StringComparison.Ordinal))
+        {
+            await _auditService.TryLogAsync(
+                "RoleChanged",
+                "User",
+                user.Id,
+                oldValue: oldCrmRole is null ? null : $"Role={oldCrmRole}",
+                newValue: $"Role={model.SelectedRole}");
+        }
+
+        if (wasLocked != model.IsLocked)
+        {
+            await _auditService.TryLogAsync(
+                model.IsLocked ? "UserLocked" : "UserUnlocked",
+                "User",
+                user.Id,
+                oldValue: wasLocked ? "Locked=true" : "Locked=false",
+                newValue: model.IsLocked ? "Locked=true" : "Locked=false");
         }
 
         TempData["SuccessMessage"] = "User updated successfully.";

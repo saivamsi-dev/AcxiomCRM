@@ -1,5 +1,6 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
+using AcxiomCRM.Services;
 using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,15 +17,18 @@ public class LeadController : Controller
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<LeadController> _logger;
+    private readonly AuditService _auditService;
 
     public LeadController(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
-        ILogger<LeadController> logger)
+        ILogger<LeadController> logger,
+        AuditService auditService)
     {
         _context = context;
         _userManager = userManager;
         _logger = logger;
+        _auditService = auditService;
     }
 
     [HttpGet]
@@ -63,6 +67,7 @@ public class LeadController : Controller
 
         _context.Leads.Add(lead);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync("Created", "Lead", lead.LeadId.ToString(), newValue: $"Status={lead.Status}");
 
         return RedirectToAction("Index", "Lead");
     }
@@ -217,6 +222,12 @@ public class LeadController : Controller
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
+            await _auditService.TryLogAsync(
+                "Converted",
+                "Lead",
+                lead.LeadId.ToString(),
+                oldValue: $"Status={nameof(LeadStatus.Qualified)}",
+                newValue: $"Status={nameof(LeadStatus.Converted)};CustomerId={customer.CustomerId};OpportunityId={opportunity.OpportunityId}");
             TempData["SuccessMessage"] = "Lead converted successfully into a customer and opportunity.";
             return RedirectToAction(nameof(Index));
         }
@@ -287,6 +298,7 @@ public class LeadController : Controller
             return View(lead);
         }
 
+        var oldValue = $"Status={existingLead.Status};ExpectedValue={existingLead.ExpectedValue}";
         existingLead.LeadName = lead.LeadName;
         existingLead.Email = lead.Email;
         existingLead.Phone = lead.Phone;
@@ -296,6 +308,12 @@ public class LeadController : Controller
         existingLead.Status = lead.Status;
 
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Updated",
+            "Lead",
+            existingLead.LeadId.ToString(),
+            oldValue,
+            $"Status={existingLead.Status};ExpectedValue={existingLead.ExpectedValue}");
         return RedirectToAction(nameof(Index));
     }
 
@@ -323,8 +341,10 @@ public class LeadController : Controller
             return NotFound();
         }
 
+        var leadId = lead.LeadId.ToString();
         _context.Leads.Remove(lead);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync("Deleted", "Lead", leadId);
         return RedirectToAction(nameof(Index));
     }
 

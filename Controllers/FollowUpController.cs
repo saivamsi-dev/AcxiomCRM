@@ -1,5 +1,6 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
+using AcxiomCRM.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -13,13 +14,16 @@ public class FollowUpController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly AuditService _auditService;
 
     public FollowUpController(
         ApplicationDbContext context,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        AuditService auditService)
     {
         _context = context;
         _userManager = userManager;
+        _auditService = auditService;
     }
 
     [HttpGet]
@@ -158,6 +162,11 @@ public class FollowUpController : Controller
 
         _context.FollowUps.Add(followUp);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Created",
+            "FollowUp",
+            followUp.FollowUpId.ToString(),
+            newValue: $"Status={followUp.Status};Type={followUp.FollowUpType}");
         return RedirectToAction(nameof(Index));
     }
 
@@ -235,6 +244,7 @@ public class FollowUpController : Controller
             return View(followUp);
         }
 
+        var oldValue = $"Status={existingFollowUp.Status};Type={existingFollowUp.FollowUpType}";
         existingFollowUp.CustomerId = followUp.CustomerId;
         existingFollowUp.LeadId = followUp.LeadId;
         existingFollowUp.FollowUpDate = followUp.FollowUpDate;
@@ -243,6 +253,12 @@ public class FollowUpController : Controller
         existingFollowUp.Status = followUp.Status;
 
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Updated",
+            "FollowUp",
+            existingFollowUp.FollowUpId.ToString(),
+            oldValue,
+            $"Status={existingFollowUp.Status};Type={existingFollowUp.FollowUpType}");
         return RedirectToAction(nameof(Index));
     }
 
@@ -308,8 +324,10 @@ public class FollowUpController : Controller
             return NotFound();
         }
 
+        var followUpId = followUp.FollowUpId.ToString();
         _context.FollowUps.Remove(followUp);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync("Deleted", "FollowUp", followUpId);
         return RedirectToAction(nameof(Index));
     }
 

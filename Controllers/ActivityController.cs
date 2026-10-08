@@ -1,5 +1,6 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
+using AcxiomCRM.Services;
 using ActivityEntity = AcxiomCRM.Models.Activity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -14,13 +15,16 @@ public class ActivityController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly AuditService _auditService;
 
     public ActivityController(
         ApplicationDbContext context,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        AuditService auditService)
     {
         _context = context;
         _userManager = userManager;
+        _auditService = auditService;
     }
 
     [HttpGet]
@@ -181,6 +185,11 @@ public class ActivityController : Controller
 
         _context.Activities.Add(activity);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Created",
+            "Activity",
+            activity.ActivityId.ToString(),
+            newValue: $"Type={activity.ActivityType};Status={activity.Status}");
         return RedirectToAction(nameof(Index));
     }
 
@@ -265,6 +274,7 @@ public class ActivityController : Controller
             return View(activity);
         }
 
+        var oldValue = $"Type={existingActivity.ActivityType};Status={existingActivity.Status}";
         existingActivity.ActivityType = activity.ActivityType;
         existingActivity.Subject = activity.Subject;
         existingActivity.Description = activity.Description;
@@ -274,6 +284,12 @@ public class ActivityController : Controller
         existingActivity.Status = activity.Status;
 
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Updated",
+            "Activity",
+            existingActivity.ActivityId.ToString(),
+            oldValue,
+            $"Type={existingActivity.ActivityType};Status={existingActivity.Status}");
         return RedirectToAction(nameof(Index));
     }
 
@@ -339,8 +355,10 @@ public class ActivityController : Controller
             return NotFound();
         }
 
+        var activityId = activity.ActivityId.ToString();
         _context.Activities.Remove(activity);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync("Deleted", "Activity", activityId);
         return RedirectToAction(nameof(Index));
     }
 

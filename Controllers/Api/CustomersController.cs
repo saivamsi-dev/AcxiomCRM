@@ -1,6 +1,7 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Dtos.Customers;
 using AcxiomCRM.Models;
+using AcxiomCRM.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +15,12 @@ namespace AcxiomCRM.Controllers.Api;
 public class CustomersController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly AuditService _auditService;
 
-    public CustomersController(ApplicationDbContext context)
+    public CustomersController(ApplicationDbContext context, AuditService auditService)
     {
         _context = context;
+        _auditService = auditService;
     }
 
     [HttpGet]
@@ -91,6 +94,11 @@ public class CustomersController : ControllerBase
 
         _context.Customers.Add(customer);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Created",
+            "Customer",
+            customer.CustomerId.ToString(),
+            newValue: $"Status={customer.Status};Source=API");
 
         var response = ToDto(customer);
         return CreatedAtAction(nameof(GetById), new { id = customer.CustomerId }, response);
@@ -122,6 +130,7 @@ public class CustomersController : ControllerBase
             return DuplicateConflict(nameof(request.Phone), "A customer with this phone number already exists.");
         }
 
+        var oldValue = $"Status={customer.Status}";
         customer.CustomerName = request.CustomerName.Trim();
         customer.Email = email;
         customer.Phone = phone;
@@ -131,6 +140,12 @@ public class CustomersController : ControllerBase
         customer.State = NormalizeOptional(request.State);
 
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Updated",
+            "Customer",
+            customer.CustomerId.ToString(),
+            oldValue,
+            $"Status={customer.Status};Source=API");
         return Ok(ToDto(customer));
     }
 
@@ -161,8 +176,10 @@ public class CustomersController : ControllerBase
             });
         }
 
+        var customerId = customer.CustomerId.ToString();
         _context.Customers.Remove(customer);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync("Deleted", "Customer", customerId, newValue: "Source=API");
         return NoContent();
     }
 

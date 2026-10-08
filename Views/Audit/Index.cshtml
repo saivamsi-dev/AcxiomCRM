@@ -1,0 +1,99 @@
+@model AcxiomCRM.ViewModels.AuditLogViewModel
+
+@{
+    ViewData["Title"] = "Audit Log";
+}
+
+<div class="container-fluid mt-4">
+    <div class="mb-4">
+        <h1>Audit Log</h1>
+        <p class="text-muted mb-0">Recent administrative and CRM activity. Showing up to 500 matching entries.</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.FilterError))
+    {
+        <div class="alert alert-warning" role="alert">@Model.FilterError</div>
+    }
+
+    <form asp-controller="Audit" asp-action="Index" method="get" class="row g-3 align-items-end mb-4">
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="userId" class="form-label">User</label>
+            <select id="userId" name="userId" class="form-select">
+                <option value="">All users</option>
+                @foreach (var user in Model.Users)
+                {
+                    <option value="@user.Value" selected="@(Model.UserId == user.Value ? "selected" : null)">@user.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="action" class="form-label">Action</label>
+            <select id="action" name="action" class="form-select">
+                <option value="">All actions</option>
+                @foreach (var action in Model.Actions)
+                {
+                    <option value="@action" selected="@(Model.Action == action ? "selected" : null)">@action</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="entityName" class="form-label">Entity / Module</label>
+            <select id="entityName" name="entityName" class="form-select">
+                <option value="">All entities</option>
+                @foreach (var entity in Model.Entities)
+                {
+                    <option value="@entity" selected="@(Model.EntityName == entity ? "selected" : null)">@entity</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-sm-6 col-lg-2">
+            <label for="fromDate" class="form-label">From date</label>
+            <input id="fromDate" name="fromDate" type="date" class="form-control" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-6 col-sm-6 col-lg-2">
+            <label for="toDate" class="form-label">To date</label>
+            <input id="toDate" name="toDate" type="date" class="form-control" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-6 col-sm-auto">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+        </div>
+        <div class="col-6 col-sm-auto">
+            <a asp-action="Index" class="btn btn-outline-secondary w-100">Clear</a>
+        </div>
+    </form>
+
+    @if (Model.Entries.Count == 0)
+    {
+        <div class="alert alert-info">No audit entries match the selected filters.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date / Time (UTC)</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Entity</th>
+                        <th>Record ID</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in Model.Entries)
+                    {
+                        <tr>
+                            <td>@entry.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>@entry.User</td>
+                            <td>@entry.Action</td>
+                            <td>@entry.EntityName</td>
+                            <td>@(entry.RecordId ?? "-")</td>
+                            <td>@(entry.IpAddress ?? "-")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

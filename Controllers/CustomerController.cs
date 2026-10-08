@@ -1,5 +1,6 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
+using AcxiomCRM.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,12 @@ namespace AcxiomCRM.Controllers;
 public class CustomerController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly AuditService _auditService;
 
-    public CustomerController(ApplicationDbContext context)
+    public CustomerController(ApplicationDbContext context, AuditService auditService)
     {
         _context = context;
+        _auditService = auditService;
     }
 
     [HttpGet]
@@ -62,6 +65,11 @@ public class CustomerController : Controller
 
         _context.Customers.Add(customer);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Created",
+            "Customer",
+            customer.CustomerId.ToString(),
+            newValue: $"Status={customer.Status}");
 
         return RedirectToAction(nameof(Index));
     }
@@ -155,6 +163,7 @@ public class CustomerController : Controller
             return View(customer);
         }
 
+        var oldValue = $"Status={existingCustomer.Status}";
         existingCustomer.CustomerName = customer.CustomerName;
         existingCustomer.Email = customer.Email;
         existingCustomer.Phone = customer.Phone;
@@ -165,6 +174,12 @@ public class CustomerController : Controller
         existingCustomer.Status = customer.Status;
 
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync(
+            "Updated",
+            "Customer",
+            existingCustomer.CustomerId.ToString(),
+            oldValue,
+            $"Status={existingCustomer.Status}");
         return RedirectToAction(nameof(Index));
     }
 
@@ -190,8 +205,10 @@ public class CustomerController : Controller
             return NotFound();
         }
 
+        var customerId = customer.CustomerId.ToString();
         _context.Customers.Remove(customer);
         await _context.SaveChangesAsync();
+        await _auditService.TryLogAsync("Deleted", "Customer", customerId);
         return RedirectToAction(nameof(Index));
     }
 }
