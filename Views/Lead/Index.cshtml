@@ -1,0 +1,87 @@
+@model IEnumerable<AcxiomCRM.Models.Lead>
+
+@{
+    ViewData["Title"] = "Leads";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Leads</h1>
+            <p class="text-muted mb-0">Manage your leads.</p>
+        </div>
+        <a asp-action="Create" class="btn btn-primary">+ Add Lead</a>
+    </div>
+
+    <form asp-action="Index" method="get" class="row g-2 align-items-center mb-3">
+        <div class="col-12 col-md-8 col-lg-6">
+            <input type="search"
+                   name="searchTerm"
+                   value="@ViewData["SearchTerm"]"
+                   class="form-control"
+                   placeholder="Search code, name, email, phone, company, source, or status"
+                   aria-label="Search leads" />
+        </div>
+        <div class="col-6 col-md-auto">
+            <button type="submit" class="btn btn-primary w-100">Search</button>
+        </div>
+        @if (ViewData["SearchTerm"] is string searchTerm && !string.IsNullOrWhiteSpace(searchTerm))
+        {
+            <div class="col-6 col-md-auto">
+                <a asp-action="Index" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+        }
+    </form>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            @if (ViewData["SearchTerm"] is string searchTerm && !string.IsNullOrWhiteSpace(searchTerm))
+            {
+                <span>No leads found matching your search.</span>
+            }
+            else
+            {
+                <span>No leads found. Create your first lead.</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Lead Code</th>
+                        <th>Lead Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Company</th>
+                        <th>Source</th>
+                        <th>Status</th>
+                        <th>Expected Value</th>
+                        <th>Created Date</th>
+                        <th>Assigned To</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var lead in Model)
+                    {
+                        <tr>
+                            <td>@lead.LeadCode</td>
+                            <td>@lead.LeadName</td>
+                            <td>@lead.Email</td>
+                            <td>@lead.Phone</td>
+                            <td>@(string.IsNullOrWhiteSpace(lead.CompanyName) ? "-" : lead.CompanyName)</td>
+                            <td>@lead.Source</td>
+                            <td>@lead.Status</td>
+                            <td>@lead.ExpectedValue.ToString("C")</td>
+                            <td>@lead.CreatedDate.ToLocalTime().ToString("dd MMM yyyy")</td>
+                            <td>@(string.IsNullOrWhiteSpace(lead.AssignedTo) ? "-" : lead.AssignedTo)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
