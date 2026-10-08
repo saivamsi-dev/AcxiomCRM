@@ -161,6 +161,158 @@ public class FollowUpController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Edit(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var followUp = await GetVisibleFollowUps(currentUser.Id)
+            .FirstOrDefaultAsync(item => item.FollowUpId == id);
+        if (followUp is null)
+        {
+            return NotFound();
+        }
+
+        await PopulateRelatedSelectionsAsync(followUp.CustomerId, followUp.LeadId);
+        return View(followUp);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(
+        int id,
+        [Bind(
+            nameof(FollowUp.CustomerId),
+            nameof(FollowUp.LeadId),
+            nameof(FollowUp.FollowUpDate),
+            nameof(FollowUp.FollowUpType),
+            nameof(FollowUp.Remarks),
+            nameof(FollowUp.Status))] FollowUp followUp)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var existingFollowUp = await GetVisibleFollowUps(currentUser.Id)
+            .FirstOrDefaultAsync(item => item.FollowUpId == id);
+        if (existingFollowUp is null)
+        {
+            return NotFound();
+        }
+
+        followUp.FollowUpId = existingFollowUp.FollowUpId;
+        followUp.AssignedTo = existingFollowUp.AssignedTo;
+        ModelState.Remove(nameof(FollowUp.FollowUpId));
+        ModelState.Remove(nameof(FollowUp.AssignedTo));
+
+        if (!Enum.TryParse<FollowUpStatus>(followUp.Status, ignoreCase: false, out var parsedStatus) ||
+            !Enum.IsDefined(parsedStatus))
+        {
+            ModelState.AddModelError(nameof(FollowUp.Status), "Select a valid follow-up status.");
+        }
+
+        if (followUp.CustomerId.HasValue &&
+            !await _context.Customers.AnyAsync(customer => customer.CustomerId == followUp.CustomerId.Value))
+        {
+            ModelState.AddModelError(nameof(FollowUp.CustomerId), "Select an existing customer.");
+        }
+
+        if (followUp.LeadId.HasValue &&
+            !await _context.Leads.AnyAsync(lead => lead.LeadId == followUp.LeadId.Value))
+        {
+            ModelState.AddModelError(nameof(FollowUp.LeadId), "Select an existing lead.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await PopulateRelatedSelectionsAsync(followUp.CustomerId, followUp.LeadId);
+            return View(followUp);
+        }
+
+        existingFollowUp.CustomerId = followUp.CustomerId;
+        existingFollowUp.LeadId = followUp.LeadId;
+        existingFollowUp.FollowUpDate = followUp.FollowUpDate;
+        existingFollowUp.FollowUpType = followUp.FollowUpType;
+        existingFollowUp.Remarks = followUp.Remarks;
+        existingFollowUp.Status = followUp.Status;
+
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Details(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var followUp = await GetVisibleFollowUps(currentUser.Id)
+            .AsNoTracking()
+            .Include(item => item.Customer)
+            .Include(item => item.Lead)
+            .Include(item => item.AssignedUser)
+            .FirstOrDefaultAsync(item => item.FollowUpId == id);
+        if (followUp is null)
+        {
+            return NotFound();
+        }
+
+        return View(followUp);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var followUp = await GetVisibleFollowUps(currentUser.Id)
+            .AsNoTracking()
+            .Include(item => item.Customer)
+            .Include(item => item.Lead)
+            .FirstOrDefaultAsync(item => item.FollowUpId == id);
+        if (followUp is null)
+        {
+            return NotFound();
+        }
+
+        return View(followUp);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteConfirmed(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var followUp = await GetVisibleFollowUps(currentUser.Id)
+            .FirstOrDefaultAsync(item => item.FollowUpId == id);
+        if (followUp is null)
+        {
+            return NotFound();
+        }
+
+        _context.FollowUps.Remove(followUp);
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
+
     private async Task PopulateRelatedSelectionsAsync(int? selectedCustomerId = null, int? selectedLeadId = null)
     {
         ViewBag.Customers = await _context.Customers
@@ -184,6 +336,17 @@ public class FollowUpController : Controller
                 Selected = lead.LeadId == selectedLeadId
             })
             .ToListAsync();
+    }
+
+    private IQueryable<FollowUp> GetVisibleFollowUps(string currentUserId)
+    {
+        var followUps = _context.FollowUps.AsQueryable();
+        if (!User.IsInRole("Admin") && !User.IsInRole("Manager"))
+        {
+            followUps = followUps.Where(followUp => followUp.AssignedTo == currentUserId);
+        }
+
+        return followUps;
     }
 
     private async Task PopulateFilterSelectionsAsync(

@@ -70,6 +70,7 @@
                         <th>Remarks</th>
                         <th>Status</th>
                         <th>Assigned To</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -83,6 +84,14 @@
                             <td>@(string.IsNullOrWhiteSpace(followUp.Remarks) ? "-" : followUp.Remarks)</td>
                             <td>@followUp.Status</td>
                             <td>@(followUp.AssignedUser?.FullName ?? followUp.AssignedUser?.Email ?? followUp.AssignedTo)</td>
+                                     <td class="text-nowrap">
+                                          <a asp-action="Details" asp-route-id="@followUp.FollowUpId"
+                                              class="btn btn-sm btn-outline-secondary">Details</a>
+                                          <a asp-action="Edit" asp-route-id="@followUp.FollowUpId"
+                                              class="btn btn-sm btn-outline-primary">Edit</a>
+                                          <a asp-action="Delete" asp-route-id="@followUp.FollowUpId"
+                                              class="btn btn-sm btn-outline-danger">Delete</a>
+                                     </td>
                         </tr>
                     }
                 </tbody>
