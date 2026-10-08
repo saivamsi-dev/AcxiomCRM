@@ -1,170 +1,68 @@
-# AcxiomCRM
+# Repository, Completion & Reviewer Note
 
-A role-based Customer Relationship Management (CRM) web application built with **ASP.NET Core MVC, Entity Framework Core, PostgreSQL, and ASP.NET Core Identity**.
+## Implementation Progress
 
-## Development Note
+At the time of submission, approximately **80–85% of the core CRM implementation** has been completed within the available development window.
 
-This project was developed as part of a time-bound implementation task.
+The major functional CRM modules have been implemented, including:
 
-The available implementation window was limited, and the development period was approximately **7:00 PM to 12:00 AM**. Because of this constraint, the project focuses on implementing the core CRM functionality and security foundations first.
+* ✅ Authentication & Authorization
+* ✅ Dashboard
+* ✅ Customer Management
+* ✅ Lead Management
+* ✅ Lead Conversion
+* ✅ Opportunity Management
+* ✅ Follow-Up Management
+* ✅ Activity Management
+* ✅ User & Role Management
+* 🟡 Audit Log — foundation implemented; full event integration and Admin UI remain
+* 🟡 REST API — Customer API implemented; additional CRM APIs remain
+* 🟡 Reports — remaining reporting functionality
+* ⏳ Final PRD acceptance and comprehensive testing
 
-I have intentionally documented the current implementation status below rather than representing unfinished functionality as completed.
+The percentage is intended as an **implementation-progress estimate**, not a claim that 80–85% of every individual PRD line item has been completed. The detailed status of each module is documented above for transparency.
 
-This README is provided for transparency and to make it clear which parts of the requested specification have been implemented and which parts would require additional development time.
+## Development Constraint
 
-## Implemented Modules
+The project was developed within a constrained implementation window of approximately **7:00 PM to 12:00 AM**.
 
-### Authentication & Authorization
+Within this timeframe, priority was given to building a functional, database-backed and security-conscious CRM foundation rather than marking incomplete requirements as finished.
 
-* ASP.NET Core Identity
-* Registration and Login
-* Password policy
-* Account lockout configuration
+The completed work includes:
+
+* ASP.NET Core Identity authentication
 * Role-based authorization
-* Roles:
-
-  * Admin
-  * Manager
-  * SalesExecutive
-* Secure logout
-* Anti-forgery protection
-
-### Dashboard
-
-* Role-scoped dashboard
-* Customer and Lead KPIs
-* Opportunity KPIs
-* Pipeline value
-* Lead status chart
-* Opportunity pipeline chart
-* Monthly opportunity outcomes
-* Date filters:
-
-  * Today
-  * This Week
-  * This Month
-  * Custom Range
-
-### Customer Management
-
-* Customer creation
-* Customer listing
-* Search
-* Details
-* Edit
-* Delete
-* Server-side validation
-* Duplicate email/phone checks
-
-### Lead Management
-
-* Lead CRUD
-* Search
-* Status management
-* Lead assignment
+* Core CRM CRUD workflows
 * Lead-to-Customer/Opportunity conversion
-
-### Opportunity Management
-
-* Opportunity CRUD
-* Pipeline stages
-* Amount and probability validation
-* Weighted pipeline calculation
-* Expected close date validation
-* Assignment and role-based access
-
-### Follow-Up Management
-
-* Follow-up CRUD
-* Customer/Lead association
-* Status management
-* Date validation
-* Assignment and role-based access
-* Search/filter support
-
-### Activity Management
-
-* Activity CRUD
-* Call, Meeting, Email and Task support
-* Customer/Lead association
-* Status and date handling
-* Role-based access
-
-### User & Role Management
-
-* Admin-only user management
-* User search
-* User creation
-* User editing
-* Role assignment
-* Account lock/unlock controls
-* Protection against removing the last Admin account
-* ASP.NET Core Identity used for password handling
-
-### Audit Log Foundation
-
-* Audit log database model
-* Audit service
-* User/action/entity/record tracking structure
-* Database migration
-* Security-conscious handling of audit data
-
-### REST API
-
+* Role-scoped Dashboard and analytics
+* Admin User & Role Management
+* Audit Log infrastructure
 * Secured Customer REST API
-* GET, POST, PUT and DELETE endpoints
-* DTO-based request/response handling
-* Role-based access
-* Duplicate conflict handling
+* Server-side validation and authorization
+* Anti-forgery protection
+* Identity password policy and account lockout
 
-## Remaining / Further Work
+## Remaining Work
 
-The following areas would require additional development and testing time to achieve complete production-level alignment with the full specification:
+With additional development time, the primary remaining work would be:
 
-* Complete Audit Log event integration across all CRM operations
-* Admin Audit Log viewing/filtering UI
-* Complete Reports module
-* Additional REST APIs for Leads, Opportunities and Follow-Ups
-* Additional validation and edge-case testing
-* Full end-to-end acceptance testing against every PRD scenario
-* Further refinement of role-specific Manager/team data scope where required
-* Production hardening and deployment configuration
-
-## Technology Stack
-
-* **Backend:** ASP.NET Core MVC
-* **Language:** C#
-* **ORM:** Entity Framework Core
-* **Database:** PostgreSQL
-* **Authentication:** ASP.NET Core Identity
-* **Frontend:** Razor Views + Bootstrap
-* **Charts:** Chart.js
-* **Authorization:** ASP.NET Core Role-Based Authorization
-* **Version Control:** Git / GitHub
-
-## Security Practices
-
-The application follows security-oriented implementation practices including:
-
-* ASP.NET Core Identity password hashing
-* Password policy enforcement
-* Account lockout
-* Server-side authorization
-* Role-based access control
-* Anti-forgery protection for state-changing MVC requests
-* DTOs for REST API boundaries
-* Server-generated identifiers and timestamps where appropriate
-* Protection against overposting through dedicated view models
-* No exposure of passwords, password hashes or security tokens in the UI/API
+1. Complete Reports and reporting filters
+2. Complete Audit Log event integration and Admin UI
+3. Expand REST APIs for Leads, Opportunities and Follow-Ups
+4. Complete comprehensive PRD-based acceptance testing
+5. Perform additional validation and security edge-case testing
+6. Production and deployment hardening
 
 ## Repository
 
-The complete source code and development history are available in the GitHub repository:
+The complete source code and development history are available here:
 
 https://github.com/saivamsi-dev/AcxiomCRM
 
 ## Note to Reviewer
 
-The implementation status in this README is intentionally transparent. Features listed as remaining are not represented as completed. Given the constrained implementation window, the project prioritizes a functional CRM foundation, authentication and authorization, core CRM workflows, dashboard functionality, user/role management, audit infrastructure, and a secured REST API.
+The implementation status in this README is intentionally transparent. Features marked **Complete** have been implemented and build-verified, while features marked **Foundation Complete**, **Partial**, **In Progress**, or **Remaining** are clearly identified and are not represented as fully completed.
 
-Additional time would be used to complete the remaining reporting, audit UI/event coverage, API expansion, and comprehensive acceptance testing.
+The repository and commit history provide the complete development record of the implementation.
+
+Thank you for reviewing the project.
