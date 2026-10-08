@@ -14,4 +14,5 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Lead> Leads { get; set; }
     public DbSet<Opportunity> Opportunities { get; set; }
     public DbSet<FollowUp> FollowUps { get; set; }
+    public DbSet<AcxiomCRM.Models.Activity> Activities { get; set; }
 }
