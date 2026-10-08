@@ -1,0 +1,149 @@
+@using System.Text.Json
+@model AcxiomCRM.Models.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container-fluid py-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h2 mb-1">Dashboard</h1>
+            <p class="text-muted mb-0">CRM overview from @Model.StartDate.ToString("dd MMM yyyy") to @Model.EndDate.ToString("dd MMM yyyy").</p>
+        </div>
+    </div>
+
+    <form asp-action="Index" method="get" class="row g-3 align-items-end mb-4">
+        <div class="col-12 col-sm-4 col-lg-3 col-xl-2">
+            <label for="period" class="form-label">Date range</label>
+            <select id="period" name="period" class="form-select">
+                <option value="Today" selected="@(Model.Period == "Today" ? "selected" : null)">Today</option>
+                <option value="Week" selected="@(Model.Period == "Week" ? "selected" : null)">Week</option>
+                <option value="Month" selected="@(Model.Period == "Month" ? "selected" : null)">Month</option>
+                <option value="Custom" selected="@(Model.Period == "Custom" ? "selected" : null)">Custom</option>
+            </select>
+        </div>
+        <div id="customStartField" class="col-6 col-sm-4 col-lg-3 col-xl-2 @(Model.Period == "Custom" ? "" : "d-none")">
+            <label for="startDate" class="form-label">From</label>
+            <input id="startDate" name="startDate" type="date" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+        </div>
+        <div id="customEndField" class="col-6 col-sm-4 col-lg-3 col-xl-2 @(Model.Period == "Custom" ? "" : "d-none")">
+            <label for="endDate" class="form-label">To</label>
+            <input id="endDate" name="endDate" type="date" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-12 col-sm-auto">
+            <button type="submit" class="btn btn-primary">Apply</button>
+        </div>
+    </form>
+
+    @if (!string.IsNullOrEmpty(Model.DateFilterError))
+    {
+        <div class="alert alert-warning" role="alert">@Model.DateFilterError</div>
+    }
+
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
+        <div class="col"><div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Total Customers</div><div class="fs-3 fw-semibold">@Model.TotalCustomers.ToString("N0")</div>
+        </div></div></div>
+        <div class="col"><div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Total Leads</div><div class="fs-3 fw-semibold">@Model.TotalLeads.ToString("N0")</div>
+        </div></div></div>
+        <div class="col"><div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Open Leads</div><div class="fs-3 fw-semibold">@Model.OpenLeads.ToString("N0")</div>
+        </div></div></div>
+        <div class="col"><div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Total Opportunities</div><div class="fs-3 fw-semibold">@(Model.TotalOpportunities?.ToString("N0") ?? "N/A")</div>
+            <div class="small text-muted">Opportunity data not available yet</div>
+        </div></div></div>
+        <div class="col"><div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Open Opportunities</div><div class="fs-3 fw-semibold">@(Model.OpenOpportunities?.ToString("N0") ?? "N/A")</div>
+            <div class="small text-muted">Opportunity data not available yet</div>
+        </div></div></div>
+        <div class="col"><div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Won Opportunities</div><div class="fs-3 fw-semibold">@(Model.WonOpportunities?.ToString("N0") ?? "N/A")</div>
+            <div class="small text-muted">Opportunity data not available yet</div>
+        </div></div></div>
+        <div class="col"><div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Lost Opportunities</div><div class="fs-3 fw-semibold">@(Model.LostOpportunities?.ToString("N0") ?? "N/A")</div>
+            <div class="small text-muted">Opportunity data not available yet</div>
+        </div></div></div>
+        <div class="col"><div class="card h-100"><div class="card-body">
+            <div class="text-muted small">Total Pipeline Value</div><div class="fs-3 fw-semibold">@(Model.TotalPipelineValue?.ToString("C") ?? "N/A")</div>
+            <div class="small text-muted">Opportunity data not available yet</div>
+        </div></div></div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-xl-6">
+            <section class="card h-100"><div class="card-body">
+                <h2 class="h5">Lead Status</h2>
+                @if (Model.LeadStatusData.Count == 0)
+                {
+                    <p class="text-muted">No lead data for the selected period.</p>
+                }
+                <div class="position-relative" style="height: 280px;"><canvas id="leadStatusChart" aria-label="Lead count by status" role="img"></canvas></div>
+            </div></section>
+        </div>
+        <div class="col-12 col-xl-6">
+            <section class="card h-100"><div class="card-body">
+                <h2 class="h5">Opportunity Pipeline</h2>
+                <p class="text-muted">Opportunity data will appear when Opportunity Management is implemented.</p>
+                <div class="position-relative" style="height: 280px;"><canvas id="opportunityPipelineChart" aria-label="Opportunity pipeline placeholder" role="img"></canvas></div>
+            </div></section>
+        </div>
+        <div class="col-12">
+            <section class="card"><div class="card-body">
+                <h2 class="h5">Monthly Sales / Outcomes</h2>
+                <p class="text-muted">Sales and outcome data will appear when Opportunity Management is implemented.</p>
+                <div class="position-relative" style="height: 280px;"><canvas id="monthlyOutcomesChart" aria-label="Monthly sales and outcomes placeholder" role="img"></canvas></div>
+            </div></section>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script>
+        (() => {
+            const periodSelect = document.getElementById("period");
+            const customStartField = document.getElementById("customStartField");
+            const customEndField = document.getElementById("customEndField");
+            periodSelect.addEventListener("change", () => {
+                const isCustom = periodSelect.value === "Custom";
+                customStartField.classList.toggle("d-none", !isCustom);
+                customEndField.classList.toggle("d-none", !isCustom);
+            });
+
+            if (!window.Chart) return;
+
+            const leadStatusLabels = @Html.Raw(JsonSerializer.Serialize(Model.LeadStatusData.Select(point => point.Label)));
+            const leadStatusValues = @Html.Raw(JsonSerializer.Serialize(Model.LeadStatusData.Select(point => point.Value)));
+            const leadStatusCanvas = document.getElementById("leadStatusChart");
+            if (leadStatusCanvas) {
+                new Chart(leadStatusCanvas, {
+                    type: "doughnut",
+                    data: {
+                        labels: leadStatusLabels,
+                        datasets: [{
+                            label: "Leads",
+                            data: leadStatusValues,
+                            backgroundColor: ["#0d6efd", "#20c997", "#ffc107", "#6c757d", "#198754", "#dc3545"]
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            new Chart(document.getElementById("opportunityPipelineChart"), {
+                type: "bar",
+                data: { labels: [], datasets: [{ label: "Pipeline value", data: [] }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+            new Chart(document.getElementById("monthlyOutcomesChart"), {
+                type: "line",
+                data: { labels: [], datasets: [] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        })();
+    </script>
+}
