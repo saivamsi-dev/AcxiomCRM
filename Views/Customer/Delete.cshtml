@@ -1,0 +1,29 @@
+@model AcxiomCRM.Models.Customer
+
+@{
+    ViewData["Title"] = "Delete Customer";
+}
+
+<div class="container mt-4">
+    <h1>Delete Customer</h1>
+    <p>Are you sure you want to delete this customer?</p>
+
+    <dl class="row">
+        <dt class="col-sm-3">Customer Code</dt>
+        <dd class="col-sm-9">@Model.CustomerCode</dd>
+
+        <dt class="col-sm-3">Customer Name</dt>
+        <dd class="col-sm-9">@Model.CustomerName</dd>
+
+        <dt class="col-sm-3">Email</dt>
+        <dd class="col-sm-9">@Model.Email</dd>
+
+        <dt class="col-sm-3">Phone</dt>
+        <dd class="col-sm-9">@Model.Phone</dd>
+    </dl>
+
+    <form asp-action="DeleteConfirmed" asp-route-id="@Model.CustomerId" method="post">
+        <button type="submit" class="btn btn-danger">Delete Customer</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+</div>

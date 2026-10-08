@@ -19,10 +19,37 @@
         </a>
     </div>
 
+    <form asp-action="Index" method="get" class="row g-2 align-items-center mb-3">
+        <div class="col-12 col-md-8 col-lg-6">
+            <input type="search"
+                   name="searchTerm"
+                   value="@ViewData["SearchTerm"]"
+                   class="form-control"
+                   placeholder="Search name, email, phone, company, or code"
+                   aria-label="Search customers" />
+        </div>
+        <div class="col-6 col-md-auto">
+            <button type="submit" class="btn btn-primary w-100">Search</button>
+        </div>
+        @if (ViewData["SearchTerm"] is string searchTerm && !string.IsNullOrWhiteSpace(searchTerm))
+        {
+            <div class="col-6 col-md-auto">
+                <a asp-action="Index" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+        }
+    </form>
+
     @if (!Model.Any())
     {
         <div class="alert alert-info">
-            No customers found. Create your first customer.
+            @if (ViewData["SearchTerm"] is string searchTerm && !string.IsNullOrWhiteSpace(searchTerm))
+            {
+                <span>No customers match your search.</span>
+            }
+            else
+            {
+                <span>No customers found. Create your first customer.</span>
+            }
         </div>
     }
     else
@@ -39,6 +66,7 @@
                             <th>Phone</th>
                             <th>Status</th>
                             <th>Created</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
 
@@ -77,9 +105,17 @@
                                 </td>
 
                                 <td>
-                                    @customer.CreatedDate.ToLocalTime()
-                                        .ToString("dd MMM yyyy")
+                                    @(customer.CreatedDate.ToLocalTime().ToString("dd MMM yyyy"))
                                 </td>
+
+                                          <td class="text-nowrap">
+                                                <a asp-action="Details" asp-route-id="@customer.CustomerId"
+                                                    class="btn btn-sm btn-outline-secondary">Details</a>
+                                                <a asp-action="Edit" asp-route-id="@customer.CustomerId"
+                                                    class="btn btn-sm btn-outline-primary">Edit</a>
+                                                <a asp-action="Delete" asp-route-id="@customer.CustomerId"
+                                                    class="btn btn-sm btn-outline-danger">Delete</a>
+                                          </td>
                             </tr>
                         }
                     </tbody>
