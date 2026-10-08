@@ -1,0 +1,92 @@
+@model IEnumerable<AcxiomCRM.Models.FollowUp>
+
+@{
+    ViewData["Title"] = "Follow-Ups";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1>Follow-Ups</h1>
+            <p class="text-muted mb-0">Track customer and lead follow-up activities.</p>
+        </div>
+        <a asp-action="Create" class="btn btn-primary">+ Create Follow-Up</a>
+    </div>
+
+    <form asp-action="Index" method="get" class="row g-2 align-items-end mb-4">
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="followUpDate" class="form-label">Follow-up date</label>
+            <input id="followUpDate" name="followUpDate" type="date" value="@ViewData["FollowUpDate"]" class="form-control" />
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="status" class="form-label">Status</label>
+            <select id="status" name="status" asp-items="ViewBag.Statuses" class="form-select">
+                <option value="">All statuses</option>
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="assignedTo" class="form-label">Assigned user</label>
+            <select id="assignedTo" name="assignedTo" asp-items="ViewBag.AssignedUsers" class="form-select">
+                @if (User.IsInRole("Manager") || User.IsInRole("Admin"))
+                {
+                    <option value="">All users</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="customerId" class="form-label">Customer</label>
+            <select id="customerId" name="customerId" asp-items="ViewBag.Customers" class="form-select">
+                <option value="">All customers</option>
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="leadId" class="form-label">Lead</label>
+            <select id="leadId" name="leadId" asp-items="ViewBag.Leads" class="form-select">
+                <option value="">All leads</option>
+            </select>
+        </div>
+        <div class="col-6 col-sm-auto">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+        </div>
+        <div class="col-6 col-sm-auto">
+            <a asp-action="Index" class="btn btn-outline-secondary w-100">Clear</a>
+        </div>
+    </form>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">No follow-ups found for the selected filters.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Customer</th>
+                        <th>Lead</th>
+                        <th>Remarks</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var followUp in Model)
+                    {
+                        <tr>
+                            <td>@followUp.FollowUpDate?.ToString("dd MMM yyyy")</td>
+                            <td>@followUp.FollowUpType</td>
+                            <td>@(followUp.Customer?.CustomerName ?? "-")</td>
+                            <td>@(followUp.Lead is null ? "-" : $"{followUp.Lead.LeadCode} - {followUp.Lead.LeadName}")</td>
+                            <td>@(string.IsNullOrWhiteSpace(followUp.Remarks) ? "-" : followUp.Remarks)</td>
+                            <td>@followUp.Status</td>
+                            <td>@(followUp.AssignedUser?.FullName ?? followUp.AssignedUser?.Email ?? followUp.AssignedTo)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
