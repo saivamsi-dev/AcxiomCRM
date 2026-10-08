@@ -1,0 +1,220 @@
+@model AcxiomCRM.ViewModels.ReportsViewModel
+
+@{
+    ViewData["Title"] = "Reports";
+    var isCustomers = Model.ReportType == "customers";
+    var isLeads = Model.ReportType == "leads";
+    var isOpportunities = Model.ReportType == "opportunities";
+    var isFollowUps = Model.ReportType == "followups";
+}
+
+<div class="container-fluid mt-4">
+    <div class="mb-4">
+        <h1>Reports</h1>
+        <p class="text-muted mb-0">Review CRM data available to your role.</p>
+    </div>
+
+    <nav class="nav nav-pills flex-wrap gap-2 mb-4" aria-label="Report types">
+        <a asp-action="Index" asp-route-reportType="customers" class="nav-link @(isCustomers ? "active" : "")">Customers</a>
+        <a asp-action="Index" asp-route-reportType="leads" class="nav-link @(isLeads ? "active" : "")">Leads</a>
+        <a asp-action="Index" asp-route-reportType="opportunities" class="nav-link @(isOpportunities ? "active" : "")">Opportunities</a>
+        <a asp-action="Index" asp-route-reportType="followups" class="nav-link @(isFollowUps ? "active" : "")">Follow-Ups</a>
+    </nav>
+
+    @if (!string.IsNullOrEmpty(Model.DateFilterError))
+    {
+        <div class="alert alert-warning" role="alert">@Model.DateFilterError</div>
+    }
+
+    <form asp-action="Index" method="get" class="row g-3 align-items-end mb-4">
+        <input type="hidden" name="reportType" value="@Model.ReportType" />
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="fromDate" class="form-label">From date</label>
+            <input id="fromDate" name="fromDate" type="date" class="form-control" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="toDate" class="form-label">To date</label>
+            <input id="toDate" name="toDate" type="date" class="form-control" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        @if (isCustomers || isLeads || isFollowUps)
+        {
+            <div class="col-12 col-sm-6 col-lg-2">
+                <label for="status" class="form-label">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    @foreach (var option in Model.StatusOptions)
+                    {
+                        <option value="@option.Value" selected="@(Model.Status == option.Value ? "selected" : null)">@option.Text</option>
+                    }
+                </select>
+            </div>
+        }
+        @if (isOpportunities)
+        {
+            <div class="col-12 col-sm-6 col-lg-2">
+                <label for="status" class="form-label">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    @foreach (var option in Model.StatusOptions)
+                    {
+                        <option value="@option.Value" selected="@(Model.Status == option.Value ? "selected" : null)">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-2">
+                <label for="stage" class="form-label">Stage</label>
+                <select id="stage" name="stage" class="form-select">
+                    <option value="">All stages</option>
+                    @foreach (var option in Model.StageOptions)
+                    {
+                        <option value="@option.Value" selected="@(Model.Stage == option.Value ? "selected" : null)">@option.Text</option>
+                    }
+                </select>
+            </div>
+        }
+        @if (isLeads)
+        {
+            <div class="col-12 col-sm-6 col-lg-2">
+                <label for="source" class="form-label">Source</label>
+                <select id="source" name="source" class="form-select">
+                    <option value="">All sources</option>
+                    @foreach (var option in Model.SourceOptions)
+                    {
+                        <option value="@option.Value" selected="@(Model.Source == option.Value ? "selected" : null)">@option.Text</option>
+                    }
+                </select>
+            </div>
+        }
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="assignedTo" class="form-label">@(isCustomers ? "Created by" : "Assigned user")</label>
+            <select id="assignedTo" name="assignedTo" class="form-select">
+                @if (Model.CanChooseAssignedUser)
+                {
+                    <option value="">All users</option>
+                }
+                @foreach (var option in Model.AssignedUserOptions)
+                {
+                    <option value="@option.Value" selected="@(Model.AssignedTo == option.Value ? "selected" : null)">@option.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label for="searchText" class="form-label">Search</label>
+            <input id="searchText" name="searchText" value="@Model.SearchText" class="form-control" />
+        </div>
+        <div class="col-6 col-sm-auto">
+            <button type="submit" class="btn btn-primary w-100">Apply</button>
+        </div>
+        <div class="col-6 col-sm-auto">
+            <a asp-action="Index" asp-route-reportType="@Model.ReportType" class="btn btn-outline-secondary w-100">Clear</a>
+        </div>
+    </form>
+
+    @if (isCustomers)
+    {
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Total Customers</div><div class="fs-3 fw-semibold">@Model.CustomerSummary.Total.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Active Customers</div><div class="fs-3 fw-semibold">@Model.CustomerSummary.Active.ToString("N0")</div></div></div></div>
+            @foreach (var summary in Model.CustomerSummary.OtherStatuses)
+            {
+                <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">@summary.Status Customers</div><div class="fs-3 fw-semibold">@summary.Count.ToString("N0")</div></div></div></div>
+            }
+        </div>
+        @if (Model.Customers.Count == 0)
+        {
+            <div class="alert alert-info">No customers match the selected filters.</div>
+        }
+        else
+        {
+            <div class="table-responsive"><table class="table table-hover align-middle">
+                <thead class="table-light"><tr><th>Code</th><th>Customer</th><th>Email</th><th>Phone</th><th>Company</th><th>City</th><th>State</th><th>Status</th><th>Created</th><th>Created By</th></tr></thead>
+                <tbody>@foreach (var row in Model.Customers)
+                {
+                    <tr><td>@row.CustomerCode</td><td>@row.CustomerName</td><td>@row.Email</td><td>@row.Phone</td><td>@(row.CompanyName ?? "-")</td><td>@(row.City ?? "-")</td><td>@(row.State ?? "-")</td><td>@row.Status</td><td>@row.CreatedDate.ToLocalTime().ToString("dd MMM yyyy")</td><td>@row.CreatedBy</td></tr>
+                }</tbody>
+            </table></div>
+        }
+    }
+
+    @if (isLeads)
+    {
+        <div class="row row-cols-2 row-cols-md-4 row-cols-xl-4 g-3 mb-4">
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Total Leads</div><div class="fs-4 fw-semibold">@Model.LeadSummary.Total.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">New</div><div class="fs-4 fw-semibold">@Model.LeadSummary.New.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Contacted</div><div class="fs-4 fw-semibold">@Model.LeadSummary.Contacted.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Qualified</div><div class="fs-4 fw-semibold">@Model.LeadSummary.Qualified.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Converted</div><div class="fs-4 fw-semibold">@Model.LeadSummary.Converted.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Lost</div><div class="fs-4 fw-semibold">@Model.LeadSummary.Lost.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Unqualified</div><div class="fs-4 fw-semibold">@Model.LeadSummary.Unqualified.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Total Expected Value</div><div class="fs-4 fw-semibold">@Model.LeadSummary.TotalExpectedValue.ToString("C")</div></div></div></div>
+        </div>
+        @if (Model.Leads.Count == 0)
+        {
+            <div class="alert alert-info">No leads match the selected filters.</div>
+        }
+        else
+        {
+            <div class="table-responsive"><table class="table table-hover align-middle">
+                <thead class="table-light"><tr><th>Lead Code</th><th>Lead Name</th><th>Company</th><th>Source</th><th>Status</th><th>Expected Value</th><th>Assigned To</th><th>Created</th></tr></thead>
+                <tbody>@foreach (var row in Model.Leads)
+                {
+                    <tr><td>@row.LeadCode</td><td>@row.LeadName</td><td>@(row.CompanyName ?? "-")</td><td>@row.Source</td><td>@row.Status</td><td>@row.ExpectedValue.ToString("C")</td><td>@row.AssignedTo</td><td>@row.CreatedDate.ToLocalTime().ToString("dd MMM yyyy")</td></tr>
+                }</tbody>
+            </table></div>
+        }
+    }
+
+    @if (isOpportunities)
+    {
+        <div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Total Opportunities</div><div class="fs-4 fw-semibold">@Model.OpportunitySummary.Total.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Open</div><div class="fs-4 fw-semibold">@Model.OpportunitySummary.Open.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Won</div><div class="fs-4 fw-semibold">@Model.OpportunitySummary.Won.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Lost</div><div class="fs-4 fw-semibold">@Model.OpportunitySummary.Lost.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Open Pipeline Value</div><div class="fs-4 fw-semibold">@Model.OpportunitySummary.OpenPipelineValue.ToString("C")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Weighted Pipeline Value</div><div class="fs-4 fw-semibold">@Model.OpportunitySummary.WeightedPipelineValue.ToString("C")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Won Value</div><div class="fs-4 fw-semibold">@Model.OpportunitySummary.WonValue.ToString("C")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Lost Value</div><div class="fs-4 fw-semibold">@Model.OpportunitySummary.LostValue.ToString("C")</div></div></div></div>
+        </div>
+        @if (Model.Opportunities.Count == 0)
+        {
+            <div class="alert alert-info">No opportunities match the selected filters.</div>
+        }
+        else
+        {
+            <div class="table-responsive"><table class="table table-hover align-middle">
+                <thead class="table-light"><tr><th>Opportunity</th><th>Customer</th><th>Lead</th><th>Amount</th><th>Stage</th><th>Probability</th><th>Weighted Value</th><th>Status</th><th>Expected Close</th><th>Assigned To</th></tr></thead>
+                <tbody>@foreach (var row in Model.Opportunities)
+                {
+                    <tr><td>@row.OpportunityName</td><td>@row.CustomerName</td><td>@(row.LeadName ?? "-")</td><td>@row.Amount.ToString("C")</td><td>@row.Stage</td><td>@row.Probability%</td><td>@row.WeightedValue.ToString("C")</td><td>@row.Status</td><td>@row.ExpectedCloseDate?.ToString("dd MMM yyyy")</td><td>@row.AssignedTo</td></tr>
+                }</tbody>
+            </table></div>
+        }
+    }
+
+    @if (isFollowUps)
+    {
+        <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-4">
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Planned</div><div class="fs-4 fw-semibold">@Model.FollowUpSummary.Planned.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Completed</div><div class="fs-4 fw-semibold">@Model.FollowUpSummary.Completed.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Missed</div><div class="fs-4 fw-semibold">@Model.FollowUpSummary.Missed.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Cancelled</div><div class="fs-4 fw-semibold">@Model.FollowUpSummary.Cancelled.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Upcoming</div><div class="fs-4 fw-semibold">@Model.FollowUpSummary.Upcoming.ToString("N0")</div></div></div></div>
+            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">Overdue / Missed</div><div class="fs-4 fw-semibold">@Model.FollowUpSummary.OverdueOrMissed.ToString("N0")</div></div></div></div>
+        </div>
+        @if (Model.FollowUps.Count == 0)
+        {
+            <div class="alert alert-info">No follow-ups match the selected filters.</div>
+        }
+        else
+        {
+            <div class="table-responsive"><table class="table table-hover align-middle">
+                <thead class="table-light"><tr><th>Date</th><th>Type</th><th>Customer</th><th>Lead</th><th>Remarks</th><th>Status</th><th>Assigned To</th></tr></thead>
+                <tbody>@foreach (var row in Model.FollowUps)
+                {
+                    <tr><td>@row.FollowUpDate?.ToString("dd MMM yyyy")</td><td>@row.FollowUpType</td><td>@(row.CustomerName ?? "-")</td><td>@(row.LeadName ?? "-")</td><td>@(string.IsNullOrWhiteSpace(row.Remarks) ? "-" : row.Remarks)</td><td>@row.Status</td><td>@row.AssignedTo</td></tr>
+                }</tbody>
+            </table></div>
+        }
+    }
+</div>
