@@ -1,0 +1,80 @@
+@model AcxiomCRM.ViewModels.UserListViewModel
+
+@{
+    ViewData["Title"] = "Users & Roles";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1>Users &amp; Roles</h1>
+            <p class="text-muted mb-0">Manage CRM accounts and access roles.</p>
+        </div>
+        <a asp-action="Create" class="btn btn-primary">+ Create User</a>
+    </div>
+
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success" role="alert">@successMessage</div>
+    }
+
+    <form asp-action="Index" method="get" class="row g-2 mb-3">
+        <div class="col-12 col-md-8 col-lg-6">
+            <label for="searchTerm" class="form-label">Search users</label>
+            <input id="searchTerm" name="searchTerm" value="@Model.SearchTerm" class="form-control"
+                   placeholder="Name, email, or username" />
+        </div>
+        <div class="col-6 col-md-auto align-self-end">
+            <button type="submit" class="btn btn-primary w-100">Search</button>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+        {
+            <div class="col-6 col-md-auto align-self-end">
+                <a asp-action="Index" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+        }
+    </form>
+
+    @if (Model.Users.Count == 0)
+    {
+        <div class="alert alert-info">No users match your search.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Email / Username</th>
+                        <th>Role(s)</th>
+                        <th>Account Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr>
+                            <td>@user.FullName</td>
+                            <td>
+                                <div>@user.Email</div>
+                                @if (user.UserName != user.Email)
+                                {
+                                    <small class="text-muted">@user.UserName</small>
+                                }
+                            </td>
+                            <td>@user.Roles</td>
+                            <td>
+                                <span class="badge @(user.AccountStatus == "Locked" ? "bg-warning text-dark" : "bg-success")">
+                                    @user.AccountStatus
+                                </span>
+                            </td>
+                            <td><a asp-action="Edit" asp-route-id="@user.Id" class="btn btn-sm btn-outline-primary">Edit</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
