@@ -9,7 +9,10 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
             <h1 class="h2 mb-1">Dashboard</h1>
-            <p class="text-muted mb-0">CRM overview from @Model.StartDate.ToString("dd MMM yyyy") to @Model.EndDate.ToString("dd MMM yyyy").</p>
+            @if (Model.StartDate.HasValue && Model.EndDate.HasValue)
+            {
+                <p class="text-muted mb-0">CRM overview from @Model.StartDate.Value.ToString("dd MMM yyyy") to @Model.EndDate.Value.ToString("dd MMM yyyy").</p>
+            }
         </div>
     </div>
 
@@ -18,18 +21,18 @@
             <label for="period" class="form-label">Date range</label>
             <select id="period" name="period" class="form-select">
                 <option value="Today" selected="@(Model.Period == "Today" ? "selected" : null)">Today</option>
-                <option value="Week" selected="@(Model.Period == "Week" ? "selected" : null)">Week</option>
-                <option value="Month" selected="@(Model.Period == "Month" ? "selected" : null)">Month</option>
+                <option value="ThisWeek" selected="@(Model.Period == "ThisWeek" ? "selected" : null)">This Week</option>
+                <option value="ThisMonth" selected="@(Model.Period == "ThisMonth" ? "selected" : null)">This Month</option>
                 <option value="Custom" selected="@(Model.Period == "Custom" ? "selected" : null)">Custom</option>
             </select>
         </div>
         <div id="customStartField" class="col-6 col-sm-4 col-lg-3 col-xl-2 @(Model.Period == "Custom" ? "" : "d-none")">
             <label for="startDate" class="form-label">From</label>
-            <input id="startDate" name="startDate" type="date" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+            <input id="startDate" name="startDate" type="date" class="form-control" value="@(Model.StartDate?.ToString("yyyy-MM-dd"))" aria-label="Custom range start date" />
         </div>
         <div id="customEndField" class="col-6 col-sm-4 col-lg-3 col-xl-2 @(Model.Period == "Custom" ? "" : "d-none")">
             <label for="endDate" class="form-label">To</label>
-            <input id="endDate" name="endDate" type="date" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+            <input id="endDate" name="endDate" type="date" class="form-control" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))" aria-label="Custom range end date" />
         </div>
         <div class="col-12 col-sm-auto">
             <button type="submit" class="btn btn-primary">Apply</button>
@@ -43,33 +46,29 @@
 
     <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
         <div class="col"><div class="card h-100"><div class="card-body">
-            <div class="text-muted small">Total Customers</div><div class="fs-3 fw-semibold">@Model.TotalCustomers.ToString("N0")</div>
+            <div class="text-muted small">Total Customers</div><div class="fs-3 fw-semibold">@(Model.TotalCustomers?.ToString("N0") ?? "N/A")</div>
         </div></div></div>
         <div class="col"><div class="card h-100"><div class="card-body">
-            <div class="text-muted small">Total Leads</div><div class="fs-3 fw-semibold">@Model.TotalLeads.ToString("N0")</div>
+            <div class="text-muted small">Total Leads</div><div class="fs-3 fw-semibold">@(Model.TotalLeads?.ToString("N0") ?? "N/A")</div>
         </div></div></div>
         <div class="col"><div class="card h-100"><div class="card-body">
-            <div class="text-muted small">Open Leads</div><div class="fs-3 fw-semibold">@Model.OpenLeads.ToString("N0")</div>
+            <div class="text-muted small">Open Leads</div><div class="fs-3 fw-semibold">@(Model.OpenLeads?.ToString("N0") ?? "N/A")</div>
+            <div class="small text-muted">New, Contacted, or Qualified</div>
         </div></div></div>
         <div class="col"><div class="card h-100"><div class="card-body">
             <div class="text-muted small">Total Opportunities</div><div class="fs-3 fw-semibold">@(Model.TotalOpportunities?.ToString("N0") ?? "N/A")</div>
-            <div class="small text-muted">Opportunity data not available yet</div>
         </div></div></div>
         <div class="col"><div class="card h-100"><div class="card-body">
             <div class="text-muted small">Open Opportunities</div><div class="fs-3 fw-semibold">@(Model.OpenOpportunities?.ToString("N0") ?? "N/A")</div>
-            <div class="small text-muted">Opportunity data not available yet</div>
         </div></div></div>
         <div class="col"><div class="card h-100"><div class="card-body">
             <div class="text-muted small">Won Opportunities</div><div class="fs-3 fw-semibold">@(Model.WonOpportunities?.ToString("N0") ?? "N/A")</div>
-            <div class="small text-muted">Opportunity data not available yet</div>
         </div></div></div>
         <div class="col"><div class="card h-100"><div class="card-body">
             <div class="text-muted small">Lost Opportunities</div><div class="fs-3 fw-semibold">@(Model.LostOpportunities?.ToString("N0") ?? "N/A")</div>
-            <div class="small text-muted">Opportunity data not available yet</div>
         </div></div></div>
         <div class="col"><div class="card h-100"><div class="card-body">
             <div class="text-muted small">Total Pipeline Value</div><div class="fs-3 fw-semibold">@(Model.TotalPipelineValue?.ToString("C") ?? "N/A")</div>
-            <div class="small text-muted">Opportunity data not available yet</div>
         </div></div></div>
     </div>
 
@@ -77,7 +76,7 @@
         <div class="col-12 col-xl-6">
             <section class="card h-100"><div class="card-body">
                 <h2 class="h5">Lead Status</h2>
-                @if (Model.LeadStatusData.Count == 0)
+                @if (!Model.LeadStatusData.Any(point => point.Value > 0))
                 {
                     <p class="text-muted">No lead data for the selected period.</p>
                 }
@@ -87,15 +86,22 @@
         <div class="col-12 col-xl-6">
             <section class="card h-100"><div class="card-body">
                 <h2 class="h5">Opportunity Pipeline</h2>
-                <p class="text-muted">Opportunity data will appear when Opportunity Management is implemented.</p>
-                <div class="position-relative" style="height: 280px;"><canvas id="opportunityPipelineChart" aria-label="Opportunity pipeline placeholder" role="img"></canvas></div>
+                @if (Model.TotalOpportunities.GetValueOrDefault() == 0)
+                {
+                    <p class="text-muted">No opportunity data for the selected period.</p>
+                }
+                <div class="position-relative" style="height: 280px;"><canvas id="opportunityPipelineChart" aria-label="Opportunity amount by pipeline stage" role="img"></canvas></div>
             </div></section>
         </div>
         <div class="col-12">
             <section class="card"><div class="card-body">
                 <h2 class="h5">Monthly Sales / Outcomes</h2>
-                <p class="text-muted">Sales and outcome data will appear when Opportunity Management is implemented.</p>
-                <div class="position-relative" style="height: 280px;"><canvas id="monthlyOutcomesChart" aria-label="Monthly sales and outcomes placeholder" role="img"></canvas></div>
+                <p class="text-muted small">Opportunity amounts are grouped by expected close month because no actual close date is stored.</p>
+                @if (Model.MonthlyOutcomesData.Count == 0)
+                {
+                    <p class="text-muted">No opportunity outcomes for the selected period.</p>
+                }
+                <div class="position-relative" style="height: 280px;"><canvas id="monthlyOutcomesChart" aria-label="Monthly won, lost, and open opportunity amounts" role="img"></canvas></div>
             </div></section>
         </div>
     </div>
@@ -118,6 +124,12 @@
 
             const leadStatusLabels = @Html.Raw(JsonSerializer.Serialize(Model.LeadStatusData.Select(point => point.Label)));
             const leadStatusValues = @Html.Raw(JsonSerializer.Serialize(Model.LeadStatusData.Select(point => point.Value)));
+            const opportunityStageLabels = @Html.Raw(JsonSerializer.Serialize(Model.OpportunityPipelineData.Select(point => point.Label)));
+            const opportunityStageValues = @Html.Raw(JsonSerializer.Serialize(Model.OpportunityPipelineData.Select(point => point.Value)));
+            const monthlyLabels = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyOutcomesData.Select(point => point.Month)));
+            const monthlyWonSales = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyOutcomesData.Select(point => point.WonSales)));
+            const monthlyLostValue = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyOutcomesData.Select(point => point.LostValue)));
+            const monthlyOpenValue = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyOutcomesData.Select(point => point.OpenValue)));
             const leadStatusCanvas = document.getElementById("leadStatusChart");
             if (leadStatusCanvas) {
                 new Chart(leadStatusCanvas, {
@@ -136,12 +148,26 @@
 
             new Chart(document.getElementById("opportunityPipelineChart"), {
                 type: "bar",
-                data: { labels: [], datasets: [{ label: "Pipeline value", data: [] }] },
+                data: {
+                    labels: opportunityStageLabels,
+                    datasets: [{
+                        label: "Opportunity amount",
+                        data: opportunityStageValues,
+                        backgroundColor: ["#0d6efd", "#6610f2", "#fd7e14", "#198754", "#dc3545"]
+                    }]
+                },
                 options: { responsive: true, maintainAspectRatio: false }
             });
             new Chart(document.getElementById("monthlyOutcomesChart"), {
-                type: "line",
-                data: { labels: [], datasets: [] },
+                type: "bar",
+                data: {
+                    labels: monthlyLabels,
+                    datasets: [
+                        { label: "Won sales", data: monthlyWonSales, backgroundColor: "#198754" },
+                        { label: "Lost value", data: monthlyLostValue, backgroundColor: "#dc3545" },
+                        { label: "Open pipeline", data: monthlyOpenValue, backgroundColor: "#0d6efd" }
+                    ]
+                },
                 options: { responsive: true, maintainAspectRatio: false }
             });
         })();
