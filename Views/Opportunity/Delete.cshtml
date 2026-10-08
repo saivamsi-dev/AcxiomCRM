@@ -1,0 +1,30 @@
+@model AcxiomCRM.Models.Opportunity
+
+@{
+    ViewData["Title"] = "Delete Opportunity";
+}
+
+<div class="container mt-4">
+    <h1>Delete Opportunity</h1>
+    <p>Are you sure you want to delete this opportunity?</p>
+
+    <dl class="row">
+        <dt class="col-sm-3">Opportunity</dt>
+        <dd class="col-sm-9">@Model.OpportunityName</dd>
+
+        <dt class="col-sm-3">Customer</dt>
+        <dd class="col-sm-9">@(Model.Customer?.CustomerName ?? "-")</dd>
+
+        <dt class="col-sm-3">Lead</dt>
+        <dd class="col-sm-9">@(Model.Lead is null ? "-" : $"{Model.Lead.LeadCode} - {Model.Lead.LeadName}")</dd>
+
+        <dt class="col-sm-3">Amount</dt>
+        <dd class="col-sm-9">@Model.Amount.ToString("C")</dd>
+    </dl>
+
+    <form asp-action="DeleteConfirmed" asp-route-id="@Model.OpportunityId" method="post">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-danger">Delete Opportunity</button>
+        <a asp-action="Details" asp-route-id="@Model.OpportunityId" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+</div>

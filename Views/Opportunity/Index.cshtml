@@ -32,6 +32,7 @@
                         <th>Expected Close</th>
                         <th>Status</th>
                         <th>Assigned To</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -47,6 +48,14 @@
                             <td>@opportunity.ExpectedCloseDate?.ToString("dd MMM yyyy")</td>
                             <td>@opportunity.Status</td>
                             <td>@(opportunity.AssignedUser?.FullName ?? opportunity.AssignedTo)</td>
+                                     <td class="text-nowrap">
+                                          <a asp-action="Details" asp-route-id="@opportunity.OpportunityId"
+                                              class="btn btn-sm btn-outline-secondary">Details</a>
+                                          <a asp-action="Edit" asp-route-id="@opportunity.OpportunityId"
+                                              class="btn btn-sm btn-outline-primary">Edit</a>
+                                          <a asp-action="Delete" asp-route-id="@opportunity.OpportunityId"
+                                              class="btn btn-sm btn-outline-danger">Delete</a>
+                                     </td>
                         </tr>
                     }
                 </tbody>
