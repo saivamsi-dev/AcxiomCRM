@@ -1,0 +1,44 @@
+@model AcxiomCRM.Models.Lead
+
+@{
+    ViewData["Title"] = "Convert Lead";
+}
+
+<div class="container mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <h1>Convert Lead</h1>
+        <a asp-action="Details" asp-route-id="@Model.LeadId" class="btn btn-outline-secondary">Back to Lead</a>
+    </div>
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-warning"></div>
+
+    <div class="alert alert-info">
+        Converting this qualified lead will create a Customer and an Opportunity. This action cannot be repeated.
+    </div>
+
+    <dl class="row">
+        <dt class="col-sm-3">Lead Code</dt>
+        <dd class="col-sm-9">@Model.LeadCode</dd>
+
+        <dt class="col-sm-3">Lead Name</dt>
+        <dd class="col-sm-9">@Model.LeadName</dd>
+
+        <dt class="col-sm-3">Email</dt>
+        <dd class="col-sm-9">@Model.Email</dd>
+
+        <dt class="col-sm-3">Phone</dt>
+        <dd class="col-sm-9">@Model.Phone</dd>
+
+        <dt class="col-sm-3">Company</dt>
+        <dd class="col-sm-9">@(Model.CompanyName ?? "-")</dd>
+
+        <dt class="col-sm-3">Expected Opportunity Value</dt>
+        <dd class="col-sm-9">@Model.ExpectedValue.ToString("C")</dd>
+    </dl>
+
+    <form asp-action="ConvertConfirmed" asp-route-id="@Model.LeadId" method="post">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-success">Confirm Conversion</button>
+        <a asp-action="Details" asp-route-id="@Model.LeadId" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+</div>

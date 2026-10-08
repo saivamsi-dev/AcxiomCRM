@@ -184,6 +184,177 @@ public class ActivityController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Edit(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var activity = await GetVisibleActivities(currentUser.Id)
+            .FirstOrDefaultAsync(item => item.ActivityId == id);
+        if (activity is null)
+        {
+            return NotFound();
+        }
+
+        await PopulateRelatedSelectionsAsync(activity.CustomerId, activity.LeadId);
+        return View(activity);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(
+        int id,
+        [Bind(
+            nameof(ActivityEntity.ActivityType),
+            nameof(ActivityEntity.Subject),
+            nameof(ActivityEntity.Description),
+            nameof(ActivityEntity.ActivityDate),
+            nameof(ActivityEntity.CustomerId),
+            nameof(ActivityEntity.LeadId),
+            nameof(ActivityEntity.Status))] ActivityEntity activity)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var existingActivity = await GetVisibleActivities(currentUser.Id)
+            .FirstOrDefaultAsync(item => item.ActivityId == id);
+        if (existingActivity is null)
+        {
+            return NotFound();
+        }
+
+        activity.ActivityId = existingActivity.ActivityId;
+        activity.AssignedTo = existingActivity.AssignedTo;
+        ModelState.Remove(nameof(ActivityEntity.ActivityId));
+        ModelState.Remove(nameof(ActivityEntity.AssignedTo));
+
+        if (!Enum.TryParse<ActivityType>(activity.ActivityType, ignoreCase: false, out var parsedType) ||
+            !Enum.IsDefined(parsedType))
+        {
+            ModelState.AddModelError(nameof(ActivityEntity.ActivityType), "Select a valid activity type.");
+        }
+
+        if (!Enum.TryParse<ActivityStatus>(activity.Status, ignoreCase: false, out var parsedStatus) ||
+            !Enum.IsDefined(parsedStatus))
+        {
+            ModelState.AddModelError(nameof(ActivityEntity.Status), "Select a valid activity status.");
+        }
+
+        if (activity.CustomerId.HasValue &&
+            !await _context.Customers.AnyAsync(customer => customer.CustomerId == activity.CustomerId.Value))
+        {
+            ModelState.AddModelError(nameof(ActivityEntity.CustomerId), "Select an existing customer.");
+        }
+
+        if (activity.LeadId.HasValue &&
+            !await _context.Leads.AnyAsync(lead => lead.LeadId == activity.LeadId.Value))
+        {
+            ModelState.AddModelError(nameof(ActivityEntity.LeadId), "Select an existing lead.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await PopulateRelatedSelectionsAsync(activity.CustomerId, activity.LeadId);
+            return View(activity);
+        }
+
+        existingActivity.ActivityType = activity.ActivityType;
+        existingActivity.Subject = activity.Subject;
+        existingActivity.Description = activity.Description;
+        existingActivity.ActivityDate = activity.ActivityDate;
+        existingActivity.CustomerId = activity.CustomerId;
+        existingActivity.LeadId = activity.LeadId;
+        existingActivity.Status = activity.Status;
+
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Details(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var activity = await GetVisibleActivities(currentUser.Id)
+            .AsNoTracking()
+            .Include(item => item.Customer)
+            .Include(item => item.Lead)
+            .Include(item => item.AssignedUser)
+            .FirstOrDefaultAsync(item => item.ActivityId == id);
+        if (activity is null)
+        {
+            return NotFound();
+        }
+
+        return View(activity);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var activity = await GetVisibleActivities(currentUser.Id)
+            .AsNoTracking()
+            .Include(item => item.Customer)
+            .Include(item => item.Lead)
+            .FirstOrDefaultAsync(item => item.ActivityId == id);
+        if (activity is null)
+        {
+            return NotFound();
+        }
+
+        return View(activity);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteConfirmed(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var activity = await GetVisibleActivities(currentUser.Id)
+            .FirstOrDefaultAsync(item => item.ActivityId == id);
+        if (activity is null)
+        {
+            return NotFound();
+        }
+
+        _context.Activities.Remove(activity);
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
+
+    private IQueryable<ActivityEntity> GetVisibleActivities(string currentUserId)
+    {
+        var activities = _context.Activities.AsQueryable();
+        if (!User.IsInRole("Admin") && !User.IsInRole("Manager"))
+        {
+            activities = activities.Where(activity => activity.AssignedTo == currentUserId);
+        }
+
+        return activities;
+    }
+
     private async Task PopulateRelatedSelectionsAsync(int? selectedCustomerId = null, int? selectedLeadId = null)
     {
         ViewBag.Customers = await _context.Customers

@@ -1,9 +1,12 @@
 using AcxiomCRM.Data;
 using AcxiomCRM.Models;
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace AcxiomCRM.Controllers;
 
@@ -12,13 +15,16 @@ public class LeadController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ILogger<LeadController> _logger;
 
     public LeadController(
         ApplicationDbContext context,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ILogger<LeadController> logger)
     {
         _context = context;
         _userManager = userManager;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -84,7 +90,143 @@ public class LeadController : Controller
             .ToListAsync();
 
         ViewData["SearchTerm"] = searchTerm;
+        ViewData["CurrentUserId"] = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        ViewData["CanConvertAnyLead"] = User.IsInRole("Admin") || User.IsInRole("Manager");
         return View(leads);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Convert(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        var lead = await GetConvertibleLeads(currentUser.Id)
+            .Include(item => item.AssignedUser)
+            .FirstOrDefaultAsync(item => item.LeadId == id);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        if (lead.Status != nameof(LeadStatus.Qualified))
+        {
+            TempData["ErrorMessage"] = "Only qualified leads can be converted.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        ViewData["CurrentUserId"] = currentUser.Id;
+        ViewData["CanConvertAnyLead"] = User.IsInRole("Admin") || User.IsInRole("Manager");
+        return View(lead);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConvertConfirmed(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+        {
+            return Forbid();
+        }
+
+        await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        try
+        {
+            var lead = await GetConvertibleLeads(currentUser.Id)
+                .FirstOrDefaultAsync(item => item.LeadId == id);
+            if (lead is null)
+            {
+                return NotFound();
+            }
+
+            if (lead.Status != nameof(LeadStatus.Qualified))
+            {
+                TempData["ErrorMessage"] = "Only qualified leads can be converted, and a lead can only be converted once.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (lead.ExpectedValue <= 0)
+            {
+                ModelState.AddModelError(string.Empty,
+                    "Set the lead's expected value to an amount greater than zero before conversion.");
+                return View("Convert", lead);
+            }
+
+            if (string.IsNullOrWhiteSpace(lead.AssignedTo) ||
+                !await _context.Users.AnyAsync(user => user.Id == lead.AssignedTo))
+            {
+                ModelState.AddModelError(string.Empty,
+                    "Assign this lead to an active user before conversion.");
+                return View("Convert", lead);
+            }
+
+            var email = lead.Email.Trim();
+            var phone = lead.Phone.Trim();
+            var emailExists = await _context.Customers
+                .AnyAsync(customer => customer.Email.ToUpper() == email.ToUpperInvariant());
+            var phoneExists = await _context.Customers
+                .AnyAsync(customer => customer.Phone.Trim() == phone);
+
+            if (emailExists || phoneExists)
+            {
+                var duplicateField = emailExists ? "email" : "phone number";
+                ModelState.AddModelError(string.Empty,
+                    $"A customer with this {duplicateField} already exists. Resolve the duplicate before converting this lead.");
+                return View("Convert", lead);
+            }
+
+            var customer = new Customer
+            {
+                CustomerCode = $"CUS-{Guid.NewGuid():N}"[..12].ToUpperInvariant(),
+                CustomerName = lead.LeadName,
+                Email = email,
+                Phone = phone,
+                CompanyName = lead.CompanyName,
+                Status = "Active",
+                CreatedBy = User.Identity?.Name ?? currentUser.UserName ?? currentUser.Id,
+                CreatedDate = DateTime.UtcNow
+            };
+
+            _context.Customers.Add(customer);
+            await _context.SaveChangesAsync();
+
+            var opportunity = new Opportunity
+            {
+                OpportunityName = string.IsNullOrWhiteSpace(lead.CompanyName)
+                    ? lead.LeadName
+                    : $"{lead.CompanyName} - {lead.LeadName}",
+                CustomerId = customer.CustomerId,
+                LeadId = lead.LeadId,
+                Amount = lead.ExpectedValue,
+                Stage = nameof(OpportunityStage.Qualification),
+                Probability = 0,
+                ExpectedCloseDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                Status = nameof(OpportunityStatus.Open),
+                CreatedDate = DateTime.UtcNow,
+                AssignedTo = lead.AssignedTo
+            };
+
+            _context.Opportunities.Add(opportunity);
+            await _context.SaveChangesAsync();
+
+            lead.Status = nameof(LeadStatus.Converted);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            TempData["SuccessMessage"] = "Lead converted successfully into a customer and opportunity.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception exception) when (exception is DbUpdateException or PostgresException)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(exception, "Failed to convert lead {LeadId}.", id);
+            TempData["ErrorMessage"] = "Lead conversion could not be completed. No changes were saved.";
+            return RedirectToAction(nameof(Index));
+        }
     }
 
     [HttpGet]
@@ -184,5 +326,16 @@ public class LeadController : Controller
         _context.Leads.Remove(lead);
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
+    }
+
+    private IQueryable<Lead> GetConvertibleLeads(string currentUserId)
+    {
+        var leads = _context.Leads.AsQueryable();
+        if (!User.IsInRole("Admin") && !User.IsInRole("Manager"))
+        {
+            leads = leads.Where(lead => lead.AssignedTo == currentUserId);
+        }
+
+        return leads;
     }
 }

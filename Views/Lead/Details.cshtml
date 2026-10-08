@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Lead Details";
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var canConvertAnyLead = User.IsInRole("Admin") || User.IsInRole("Manager");
 }
 
 <div class="container mt-4">
@@ -10,6 +12,11 @@
         <div>
             <a asp-action="Edit" asp-route-id="@Model.LeadId" class="btn btn-primary">Edit</a>
             <a asp-action="Delete" asp-route-id="@Model.LeadId" class="btn btn-outline-danger">Delete</a>
+            @if (Model.Status == nameof(LeadStatus.Qualified) &&
+                (canConvertAnyLead || Model.AssignedTo == currentUserId))
+            {
+                <a asp-action="Convert" asp-route-id="@Model.LeadId" class="btn btn-success">Convert</a>
+            }
             <a asp-action="Index" class="btn btn-outline-secondary">Back to Leads</a>
         </div>
     </div>
@@ -48,4 +55,13 @@
         <dt class="col-sm-3">Assigned To</dt>
         <dd class="col-sm-9">@(Model.AssignedUser?.FullName ?? Model.AssignedTo ?? "-")</dd>
     </dl>
+
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success" role="alert">@successMessage</div>
+    }
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-warning" role="alert">@errorMessage</div>
+    }
 </div>

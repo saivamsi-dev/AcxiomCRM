@@ -77,6 +77,7 @@
                         <th>Lead</th>
                         <th>Status</th>
                         <th>Assigned To</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,6 +92,14 @@
                             <td>@(activity.Lead is null ? "-" : $"{activity.Lead.LeadCode} - {activity.Lead.LeadName}")</td>
                             <td>@activity.Status</td>
                             <td>@(activity.AssignedUser?.FullName ?? activity.AssignedUser?.Email ?? activity.AssignedTo)</td>
+                                     <td class="text-nowrap">
+                                          <a asp-action="Details" asp-route-id="@activity.ActivityId"
+                                              class="btn btn-sm btn-outline-secondary">Details</a>
+                                          <a asp-action="Edit" asp-route-id="@activity.ActivityId"
+                                              class="btn btn-sm btn-outline-primary">Edit</a>
+                                          <a asp-action="Delete" asp-route-id="@activity.ActivityId"
+                                              class="btn btn-sm btn-outline-danger">Delete</a>
+                                     </td>
                         </tr>
                     }
                 </tbody>
