@@ -43,8 +43,14 @@ public class AccountController : Controller
             FullName = model.FullName
         };
         var result = await _userManager.CreateAsync(user, model.Password);
+        // if (result.Succeeded)
+        // {
+        //     await _signInManager.SignInAsync(user, isPersistent: false);
+        //     return RedirectToLocal(returnUrl);
+        // }
         if (result.Succeeded)
         {
+            await _userManager.AddToRoleAsync(user, "SalesExecutive");
             await _signInManager.SignInAsync(user, isPersistent: false);
             return RedirectToLocal(returnUrl);
         }
